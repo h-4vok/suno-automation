@@ -1,0 +1,4 @@
+interface:
+  display_name: "Interviewer"
+  short_description: "Interview and ready GitHub issues"
+  default_prompt: "Use $interviewer to refine this GitHub issue into a Codex-ready contract."

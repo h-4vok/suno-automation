@@ -14,7 +14,6 @@
 - Gemini output is JSON-schema constrained and validated again with Zod.
 - Browser creation fails before clicking if required fields or enabled Create control are absent.
 - Live submission uses two independent gates. Neither may default to enabled.
-- GitHub Codex workflows accept only trusted issue authors and trusted triggering actors; issue content never enters a shell expression.
 
 ## Reporting
 
