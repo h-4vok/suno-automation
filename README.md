@@ -128,6 +128,7 @@ hooks format and lint staged files; the pre-push hook runs the complete quality 
 - [Testing strategy](docs/testing.md)
 - [Security policy](SECURITY.md)
 - [Agent engineering rules](AGENTS.md)
+- [Local Codex issue loop](docs/codex-loop.md)
 
 Generated builds, runtime state, local presets, API keys, extension tokens, coverage, and Graphify
 artifacts are intentionally excluded from Git.
