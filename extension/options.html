@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Suno Assistant Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Suno Assistant</h1>
+      <p id="packageVersion" class="package-version"></p>
+      <p>Coordinator stays local. Token must match <code>SUNO_EXTENSION_TOKEN</code>.</p>
+      <label>
+        Coordinator URL
+        <input id="baseUrl" type="url" value="http://127.0.0.1:4317" />
+      </label>
+      <label>
+        Extension token
+        <input id="token" type="password" autocomplete="off" />
+      </label>
+      <fieldset>
+        <legend>Live safety gate</legend>
+        <label class="checkbox">
+          <input id="allowLiveSubmissions" type="checkbox" />
+          Allow this extension to click Create when server is also in live mode
+        </label>
+        <p class="warning">
+          Leave off during setup. Draft fields may still be filled in draft mode.
+        </p>
+      </fieldset>
+      <button id="save" type="button">Save</button>
+      <output id="status" role="status"></output>
+      <p class="history-note">
+        Coordinator offline is normal when the local server is stopped. Brave may retain older
+        entries on its Errors page until you clear them.
+      </p>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

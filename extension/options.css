@@ -1,0 +1,63 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 22rem;
+}
+
+main {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem auto;
+  max-width: 42rem;
+  padding: 0 1.5rem;
+}
+
+.package-version,
+.history-note {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+  font-size: 0.9rem;
+}
+
+label:not(.checkbox) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input[type="url"],
+input[type="password"] {
+  font: inherit;
+  padding: 0.6rem;
+}
+
+fieldset {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding: 1rem;
+}
+
+.warning {
+  color: #c87400;
+}
+
+button {
+  justify-self: start;
+  padding: 0.55rem 1.1rem;
+}
+
+output {
+  display: block;
+  min-height: 1.5rem;
+}
+
+output[data-state="connected"] {
+  color: #35a854;
+}
+
+output[data-state="offline"],
+output[data-state="unauthorized"],
+output[data-state="error"] {
+  color: #d17b00;
+}

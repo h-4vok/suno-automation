@@ -1,0 +1,69 @@
+{
+  "name": "suno-automation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "build": "pnpm build:server && pnpm build:extension",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:extension": "node scripts/build-extension.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "dev": "tsx watch src/cli.ts serve",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "prepare": "simple-git-hooks",
+    "setup:local": "tsx scripts/local-setup.ts setup",
+    "get-extension-token": "tsx scripts/local-setup.ts get-token",
+    "rotate-extension-token": "tsx scripts/local-setup.ts rotate-token",
+    "run:now": "tsx src/cli.ts run config/config.yaml",
+    "start": "node dist/src/cli.js serve",
+    "status": "tsx src/cli.ts status config/config.yaml",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:mutation": "stryker run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "validate:config": "tsx src/cli.ts validate-config config/config.example.yaml"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "corepack pnpm exec lint-staged",
+    "pre-push": "corepack pnpm check"
+  },
+  "lint-staged": {
+    "*.{ts,js,mjs,json,yaml,yml,md,css,html}": "prettier --write",
+    "*.ts": "eslint --fix"
+  },
+  "dependencies": {
+    "@google/genai": "^2.12.0",
+    "croner": "^10.0.1",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.10.0",
+    "pino": "^10.3.1",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/typescript-checker": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/chrome": "^0.2.2",
+    "@types/node": "^26.1.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "fast-check": "^4.9.0",
+    "happy-dom": "^20.10.6",
+    "lint-staged": "^17.1.0",
+    "prettier": "^3.9.5",
+    "simple-git-hooks": "^2.13.1",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.64.0",
+    "vitest": "^4.1.10"
+  }
+}

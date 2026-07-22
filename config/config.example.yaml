@@ -1,0 +1,46 @@
+automation:
+  # observe = inspect only; draft = fill once, never submit; live = submit.
+  mode: observe
+  maxGenerationsPerDay: 5
+  instrumentalFeatureChance: 0.25
+
+schedule:
+  cron: "30 23 * * *"
+  timezone: Europe/London
+
+server:
+  host: 127.0.0.1
+  port: 4317
+  extensionTokenEnv: SUNO_EXTENSION_TOKEN
+
+gemini:
+  apiKeyEnv: GEMINI_API_KEY
+  model: gemini-3.5-flash
+  temperature: 1.1
+  maxOutputTokens: 1800
+
+styles:
+  - id: midnight-tango
+    name: Midnight Tango
+    weight: 1
+    enabled: true
+    prompt: >-
+      Contemporary nocturnal tango, bandoneon-led chamber ensemble, dramatic rubato,
+      close-miked acoustic texture, restless syncopation, cinematic tension, no vocals.
+  - id: desert-krautrock
+    name: Desert Krautrock
+    weight: 1
+    enabled: true
+    prompt: >-
+      Hypnotic motorik rhythm, dry desert guitars, analog synthesizer haze, patient
+      long-form development, dusty psychedelic production, no vocals.
+
+instruments:
+  - id: baritone-sax
+    name: baritone saxophone
+    weight: 1
+    instruction: Feature a concise baritone saxophone solo that grows from restrained to ferocious.
+  - id: prepared-piano
+    name: prepared piano
+    weight: 1
+    instruction: Include a short prepared-piano interlude with percussive metallic resonance.

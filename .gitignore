@@ -1,0 +1,58 @@
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# This project uses pnpm as its canonical package manager
+package-lock.json
+yarn.lock
+bun.lock
+bun.lockb
+
+# Compiled and packaged output
+dist/
+extension/dist/
+*.tsbuildinfo
+*.crx
+*.pem
+
+# Tests, coverage, mutation reports, and caches
+coverage/
+reports/
+.stryker-tmp/
+.nyc_output/
+.cache/
+.eslintcache
+
+# Local secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+config/config.yaml
+config/*.local.yaml
+runtime/
+.codex/runtime/
+
+# Generated local knowledge graph
+graphify-out/
+
+# Logs and temporary files
+*.log
+*.log.*
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+tmp/
+temp/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini

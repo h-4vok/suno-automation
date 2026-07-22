@@ -1,0 +1,4 @@
+interface:
+  display_name: "Adversarial Test Review"
+  short_description: "Challenge tests with evidence and mutations"
+  default_prompt: "Use $adversarial-test-review to inspect changed tests for false confidence and missing failure proofs."

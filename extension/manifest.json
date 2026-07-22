@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Suno Daily Credit Assistant",
+  "version": "0.1.5",
+  "description": "Uses your existing Suno session to inspect quota and prepare instrumental drafts.",
+  "permissions": ["alarms", "storage", "tabs"],
+  "host_permissions": ["http://127.0.0.1/*", "https://suno.com/*", "https://www.suno.com/*"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://suno.com/*", "https://www.suno.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_popup": "options.html",
+    "default_title": "Suno Daily Credit Assistant"
+  }
+}
