@@ -12,6 +12,11 @@ Build a local-first, auditable assistant that uses otherwise-expiring Suno free-
 - Mutation gate: `pnpm test:mutation`
 - Config check: `pnpm validate:config`
 
+## Codex issue loop
+
+- Follow [`docs/codex-loop.md`](docs/codex-loop.md) when refining, promoting, claiming, implementing, or recovering GitHub issue work.
+- `codex-ready` means the issue body contains a decision-complete Markdown contract. It authorizes local implementation, not live Suno access.
+
 ## Non-negotiable invariants
 
 - Never put `GEMINI_API_KEY`, extension tokens, cookies, or Suno session data in source, logs, fixtures, issue bodies, or PRs.

@@ -5,7 +5,7 @@ description: Interview, refine, create, and update GitHub issues into implementa
 
 # Interviewer
 
-Turn a request or existing issue into a small, auditable implementation contract. Be a concise PM and tech lead in one conversation; do not invent product decisions.
+Turn a request or existing issue into a small, auditable, decision-complete Markdown implementation contract. Be a concise PM and tech lead in one conversation; do not invent product decisions. The contract is written for the implementing Codex agent, not parsed as a business schema by the executor.
 
 ## Repository guardrails
 
@@ -31,7 +31,7 @@ If the user asks to move quickly, state assumptions in an **Open decisions** sec
 
 ## Issue contract
 
-Write or update the issue in this compact form; omit only sections that truly do not apply:
+Write or update the issue body in this compact Markdown form; omit only sections that truly do not apply. Do not add a YAML contract, issue-form schema, or machine-readable business-plan wrapper.
 
 ```markdown
 ## Problem
@@ -51,6 +51,8 @@ Write or update the issue in this compact form; omit only sections that truly do
 
 ## Implementation notes
 
+Describe the chosen approach, affected interfaces, failure behavior, compatibility constraints, and any implementation boundary needed to avoid a new product or architecture decision during delivery.
+
 ## Verification
 
 - [ ] Regression/outcome tests cover …
@@ -67,7 +69,7 @@ For defects, include reproduction, expected versus actual behavior, and the regr
 
 ## Readiness and promotion
 
-After each substantive update, evaluate the contract. Apply `codex-ready` automatically only if all are true:
+After each substantive update, evaluate the contract. Applying `codex-ready` declares that the Markdown contract is ready for implementation; the local executor does not independently judge or parse its semantic quality. Apply `codex-ready` automatically only if all are true:
 
 - Outcome, in/out scope, acceptance criteria, and verification are actionable.
 - Relevant safety/security/default-mode constraints are explicit.
@@ -75,6 +77,8 @@ After each substantive update, evaluate the contract. Apply `codex-ready` automa
 - No material unanswered decision remains; `Open decisions` is empty or contains only non-blocking implementation discretion.
 - The work is small enough to implement or has a clear, independently deliverable first slice.
 - The issue contains no secrets or instructions to access a live Suno account without explicit current-task authorization.
+
+Treat referenced issue dependencies as resolved only when every blocking issue is closed. `manual-validation` describes verification that a human must perform; it does not by itself make implementation ineligible. Epics, blank contracts, material open decisions, unresolved dependencies, and unverifiable acceptance criteria remain ineligible.
 
 If any gate fails, do not apply the label. State the shortest remaining question or blocked dependency. Never claim that `codex-ready` runs CI, dispatches GitHub Actions, or otherwise triggers automation; in this repository it is issue metadata only.
 
