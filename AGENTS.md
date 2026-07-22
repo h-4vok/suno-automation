@@ -25,6 +25,7 @@ Build a local-first, auditable assistant that uses otherwise-expiring Suno free-
 ## Engineering expectations
 
 - Keep domain selection, planning, and workflow logic independent of browser and SDK adapters.
+- Name implementation branches `codex/<issue-number>-<short-kebab-summary>`; use `codex/epic-<issue-number>-<short-kebab-summary>` for work spanning an epic. Keep names lowercase, descriptive, and under 60 characters.
 - Validate every boundary with schemas. Inject clock, randomness, persistence, and AI interfaces for tests.
 - Add a regression test that fails under the defect before fixing it.
 - Prefer outcome tests over implementation assertions. Run `$adversarial-test-review` whenever tests change.
