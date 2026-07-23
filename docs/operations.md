@@ -1,5 +1,13 @@
 # Operations
 
+## Codex issue execution boundary
+
+GitHub is used for backlog, issue contracts, lifecycle audit, and draft-pull-request review. Codex Desktop is the only issue executor for this repository: it runs locally on the user's PC through the ChatGPT subscription available in the app and uses an isolated worktree.
+
+Codex Cloud is not used. Adding `codex-ready` never launches a GitHub workflow, API task, or remote executor. GitHub Actions are reserved for repository validation (`ci.yml` and `mutation.yml`) and must not select, claim, or implement issues. The local PC and Codex Desktop app must be running for scheduled work; this repository does not install or enable a user schedule automatically.
+
+The local executor must fail closed when issue state, dependencies, ownership, secrets, worktree state, or recovery evidence is unknown. It must never place credentials, cookies, session data, or private generated content in GitHub. Every implementation ends in a human-reviewed draft pull request; the executor does not self-approve or merge.
+
 ## One-time local setup
 
 1. Run `pnpm setup:local`. It creates missing local files and copies a random extension token to the clipboard without printing it. Existing config and token are preserved.
