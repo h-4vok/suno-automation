@@ -31,7 +31,7 @@ If the user asks to move quickly, state assumptions in an **Open decisions** sec
 
 ## Issue contract
 
-Write or update the issue body in this compact Markdown form; omit only sections that truly do not apply. Do not add a YAML contract, issue-form schema, or machine-readable business-plan wrapper.
+Write or update the issue body in this compact Markdown form; omit only sections that truly do not apply while the issue is still in `backlog`. Before promotion, every required decision dimension must be covered either by a section or by an explicit statement that it does not apply. Do not add a YAML contract, issue-form schema, or machine-readable business-plan wrapper.
 
 ```markdown
 ## Problem
@@ -69,7 +69,7 @@ For defects, include reproduction, expected versus actual behavior, and the regr
 
 ## Readiness and promotion
 
-After each substantive update, evaluate the contract. Applying `codex-ready` declares that the Markdown contract is ready for implementation; the local executor does not independently judge or parse its semantic quality. Apply `codex-ready` automatically only if all are true:
+After each substantive update, evaluate the contract. This skill is the human-invoked refinement gate: once the interview reaches a decision-complete outcome, it must apply `codex-ready` in the same update; leaving an eligible issue in `backlog` is an incomplete operation. Applying `codex-ready` declares that the Markdown contract is ready for implementation; the later local dispatcher does not independently judge or parse its semantic quality. Apply `codex-ready` automatically only if all are true:
 
 - Outcome, in/out scope, acceptance criteria, and verification are actionable.
 - Relevant safety/security/default-mode constraints are explicit.
@@ -78,8 +78,10 @@ After each substantive update, evaluate the contract. Applying `codex-ready` dec
 - The work is small enough to implement or has a clear, independently deliverable first slice.
 - The issue contains no secrets or instructions to access a live Suno account without explicit current-task authorization.
 
+If any gate fails, keep the issue in its current refinement lifecycle state and do not claim that the automatic loop has started. Ask the shortest remaining product question or report the concrete blocker; after the user answers, re-evaluate and promote in that same refinement task when all gates pass.
+
 Treat referenced issue dependencies as resolved only when every blocking issue is closed. `manual-validation` describes verification that a human must perform; it does not by itself make implementation ineligible. Epics, blank contracts, material open decisions, unresolved dependencies, and unverifiable acceptance criteria remain ineligible.
 
-If any gate fails, do not apply the label. State the shortest remaining question or blocked dependency. Never claim that `codex-ready` runs CI, dispatches GitHub Actions, or otherwise triggers automation; in this repository it is issue metadata only.
+Never claim that `codex-ready` runs CI, dispatches GitHub Actions, or otherwise triggers automation; in this repository it is the hand-off signal consumed by the later local dispatcher. The dispatcher/claim/lease stages are separate implementation work in issues #42 and #43.
 
 Create the label if it is missing and the user has authorized issue updates. When updating an existing issue, preserve useful discussion/history and replace only stale or ambiguous contract content. Report the exact issue URL, changes made, readiness result, label action, and remaining blockers.
