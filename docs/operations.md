@@ -1,5 +1,13 @@
 # Operations
 
+## Codex issue execution boundary
+
+GitHub is used for backlog, issue contracts, lifecycle audit, and draft-pull-request review. Codex Desktop workers run locally on the user's PC through the ChatGPT subscription available in the app. Two pre-existing isolated worktrees are available, with one active issue per worktree.
+
+The scheduler polls GitHub for `codex-ready` issues, verifies dependencies, claims eligible work, and assigns it to an available worktree. GitHub Actions remain reserved for repository validation (`ci.yml` and `mutation.yml`). The local PC and Codex Desktop app must be running for scheduled work; this repository does not install or enable a user schedule automatically.
+
+Workers must fail closed when issue state, dependencies, ownership, secrets, worktree state, or recovery evidence is unknown. They must never place credentials, cookies, session data, or private generated content in GitHub. Every implementation ends in a human-reviewed draft pull request; workers do not self-approve or merge.
+
 ## One-time local setup
 
 1. Run `pnpm setup:local`. It creates missing local files and copies a random extension token to the clipboard without printing it. Existing config and token are preserved.

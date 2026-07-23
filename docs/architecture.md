@@ -4,7 +4,8 @@
 
 ```mermaid
 flowchart LR
-  Cron["Local daily scheduler"] --> Coordinator["Coordinator state machine"]
+  Cron["Local GitHub issue scheduler"] --> Workers["Two local Codex Desktop workers"]
+  Workers --> Coordinator["Coordinator state machine"]
   Coordinator --> Domain["Weighted style + optional instrument"]
   Domain --> Gemini["Gemini structured output"]
   Coordinator <--> Extension["Brave/Chrome MV3 extension"]
@@ -12,7 +13,7 @@ flowchart LR
   Coordinator --> State["Atomic local JSON state"]
 ```
 
-The split is intentional: secrets and orchestration stay in Node; cookies stay inside the browser profile; the content script knows only the prepared Suno fields.
+The split is intentional: issue polling, assignment, and leases run locally; secrets and Suno orchestration stay in Node; cookies stay inside the browser profile; the content script knows only the prepared Suno fields. Two pre-existing worktrees provide bounded parallelism, one active issue per worktree.
 
 ## Daily run
 

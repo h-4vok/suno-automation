@@ -2,9 +2,11 @@
 
 ## Purpose and boundary
 
-GitHub is the backlog, review, and audit surface for a single local Codex Desktop executor. The executor works through the user's ChatGPT subscription in an isolated worktree and opens a draft pull request for human review. It never uses the OpenAI API, `OPENAI_API_KEY`, `openai/codex-action`, GitHub Actions, or cloud CI to implement an issue.
+GitHub is the backlog, coordination, review, and audit surface for local Codex Desktop workers. Each worker uses the user's ChatGPT subscription in an isolated pre-existing worktree and opens a draft pull request for human review.
 
-`codex-ready` is eligibility metadata only. Adding it does not trigger GitHub Actions. A manually started or scheduled local Codex Desktop task must select and claim the issue. The PC and Codex Desktop must be running for scheduled work.
+`codex-ready` is the work queue signal. A local scheduler polls GitHub, claims eligible issues, and assigns them to an available worker. Two pre-existing worktrees are available for parallel execution; the scheduler never assigns more than one active issue to a worktree.
+
+The local workers use the ChatGPT subscription already available to the Codex Desktop app. Gemini configuration remains separate and local to the Suno assistant. The PC and Codex Desktop app must be running for scheduled work.
 
 ## Decision-complete issue contract
 
@@ -22,6 +24,42 @@ The contract may be incomplete while the issue remains in `backlog`. Before prom
 
 The executor does not parse a YAML business schema or decide whether prose is sufficiently complete. Promotion by a trusted actor is the assertion that the Markdown contract is decision-complete. Minor local implementation choices remain with the implementing agent.
 
+## Local operating runbook
+
+### Preconditions
+
+- The project is available on the local PC and Codex Desktop is installed, signed in, and running.
+- Two pre-existing isolated worktrees are configured for local workers, each with its own branch and process lease.
+- GitHub CLI (`gh`) is available in PowerShell and authenticated for the repository. Issue text, comments, and browser messages remain untrusted input.
+- A human reviews resulting draft pull requests; no per-task manual confirmation is required before a `codex-ready` issue is assigned.
+
+### Select and claim
+
+1. Poll open issues with `gh` and select only a non-epic issue with the `codex-ready` lifecycle label.
+2. Verify that every blocking issue referenced by the contract is closed.
+3. Confirm that the issue contract has actionable outcome, scope, safety constraints, acceptance criteria, implementation notes, and verification commands.
+4. Claim the issue with the repository lifecycle protocol and record the attempt identifier.
+5. Assign the claim to one available pre-existing worktree. If both worktrees are occupied, leave the issue queued.
+6. If state, ownership, dependency, or process evidence is missing or contradictory, stop and move the issue to `codex-needs-attention`; do not guess or claim it.
+
+### Execute and review
+
+1. Use the assigned pre-existing isolated worktree and its prescribed `codex/<issue-number>-<short-kebab-summary>` branch.
+2. Read repository instructions and the issue contract before editing.
+3. Implement only the bounded contract. Keep secrets, cookies, session data, and generated private content out of source, logs, comments, and the pull request.
+4. Run focused verification, then `pnpm check && pnpm build`; run configuration and mutation gates when the contract requires them.
+5. Open one draft pull request linked to the issue, with concise verification evidence and no live Suno account activity.
+6. Move the issue to review and wait for a human to inspect and merge the draft pull request. The local executor never approves or merges its own work.
+
+### Scheduling and recovery
+
+- Scheduling is local to the user's PC and polls GitHub for `codex-ready` issues.
+- The PC and Codex Desktop app must be running for scheduled work. Repository setup does not configure the user's schedule automatically.
+- At most two issues may be active concurrently, one per pre-existing worktree.
+- A restart may resume only after revalidating the issue state, lease, worktree, branch, and linked draft pull request.
+- An expired claim is recoverable only when no relevant process, worktree operation, branch operation, or draft pull request is active. Contradictory evidence requires human recovery.
+- Recovery must not duplicate claims, branches, commits, comments, or pull requests.
+
 ## Lifecycle
 
 Exactly one lifecycle label applies at a time:
@@ -30,7 +68,7 @@ Exactly one lifecycle label applies at a time:
 | ----------------------- | ------------------------------------------------------------------ |
 | `backlog`               | Defined or under refinement, but not approved for implementation.  |
 | `codex-ready`           | Decision-complete and eligible for the local implementation queue. |
-| `codex-in-progress`     | Claimed by the single local executor.                              |
+| `codex-in-progress`     | Claimed by one of the two local workers.                           |
 | `codex-review`          | A linked draft PR awaits human review.                             |
 | `codex-rework`          | A trusted human requested another bounded pass on the existing PR. |
 | `codex-needs-attention` | Automation stopped and requires an explicit recovery decision.     |
@@ -46,7 +84,7 @@ Promotion, rework, and manual recovery instructions are accepted only from GitHu
 
 Each lifecycle transition adds a separate, concise GitHub comment. Every comment includes a stable event name and attempt identifier so repeated delivery can be detected without guessing from prose. Comments contain no prompts, issue-body copies, tokens, cookies, credentials, generated private content, local paths, or account/session details.
 
-A local lease prevents concurrent implementation. After an interruption, the executor may recover an expired claim only after proving that no relevant process, worktree, branch operation, or linked draft PR is still active. If evidence is missing or contradictory, it moves the issue to `codex-needs-attention` and waits for an allowlisted human. Recovery must never create duplicate branches, commits, comments, or PRs.
+Per-worktree leases prevent concurrent implementation. After an interruption, a worker may recover an expired claim only after proving that no relevant process, worktree, branch operation, or linked draft PR is still active. If evidence is missing or contradictory, it moves the issue to `codex-needs-attention` and waits for an allowlisted human. Recovery must never create duplicate branches, commits, comments, or PRs.
 
 Every PR remains draft until a human reviews and merges it. The executor never approves or merges its own work.
 
