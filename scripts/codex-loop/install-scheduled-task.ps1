@@ -2,7 +2,8 @@
 param([Parameter(Mandatory = $true)][string]$ConfigPath)
 
 $ErrorActionPreference = "Stop"
-$config = Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json -AsHashtable
+# The default Windows JSON parser returns a PSCustomObject.
+$config = Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
 if ($config.version -ne 1 -or -not $config.scheduler.taskName -or [int]$config.scheduler.pollMinutes -lt 1) { throw "Scheduler config is invalid." }
 $dispatcher = Join-Path $PSScriptRoot "dispatch.ps1"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$dispatcher`" -ConfigPath `"$ConfigPath`""

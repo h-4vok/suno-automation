@@ -5,8 +5,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Read-Json([string]$Path) { Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json -AsHashtable }
-function Write-JsonAtomic([string]$Path, [hashtable]$Value) {
+function Read-Json([string]$Path) {
+  # Keep the executor compatible with the Windows PowerShell 5.1 installed by default.
+  Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+}
+function Write-JsonAtomic([string]$Path, [object]$Value) {
   $temporary = "$Path.$([guid]::NewGuid().ToString('N')).tmp"
   try { $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporary -Encoding utf8 -NoNewline; Move-Item -LiteralPath $temporary -Destination $Path -Force }
   finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }

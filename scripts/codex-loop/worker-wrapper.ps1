@@ -9,10 +9,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Read-Json([string]$Path) {
-  return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json -AsHashtable
+  # The default Windows JSON parser returns a PSCustomObject.
+  return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
 }
 
-function Write-JsonAtomic([string]$Path, [hashtable]$Value) {
+function Write-JsonAtomic([string]$Path, [object]$Value) {
   $temporary = "$Path.$([guid]::NewGuid().ToString('N')).tmp"
   try {
     $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporary -Encoding utf8 -NoNewline

@@ -51,4 +51,16 @@ describe("one-worker Windows scheduler assets", () => {
     expect(wrapper).toContain("finally");
     expect(wrapper).toContain("preserve all existing useful changes");
   });
+
+  it("avoids PowerShell 7-only JSON parsing so the installed task works on Windows PowerShell 5.1", async () => {
+    const scripts = await Promise.all([
+      asset("scripts/codex-loop/dispatch.ps1"),
+      asset("scripts/codex-loop/worker-wrapper.ps1"),
+      asset("scripts/codex-loop/install-scheduled-task.ps1"),
+    ]);
+
+    for (const script of scripts) {
+      expect(script).not.toMatch(/ConvertFrom-Json\s+-AsHashtable/);
+    }
+  });
 });
