@@ -26,6 +26,7 @@ import {
 } from "./support/loop-fixtures.js";
 
 const directories: string[] = [];
+const packageManager = packageManagerExecutable();
 
 afterEach(async () => {
   await Promise.all(
@@ -288,16 +289,18 @@ describe("deep verification", () => {
       "mutation",
     ]);
     expect(changedPaths).toHaveBeenCalledWith("C:\\safe\\worker-1", "origin/main");
-    expect(run).toHaveBeenNthCalledWith(1, "C:\\safe\\worker-1", "pnpm.cmd", [
+    expect(run).toHaveBeenNthCalledWith(1, "C:\\safe\\worker-1", packageManager, [
       "exec",
       "vitest",
       "run",
       "test/loop-domain.test.ts",
     ]);
-    expect(run).toHaveBeenNthCalledWith(2, "C:\\safe\\worker-1", "pnpm.cmd", ["check"]);
-    expect(run).toHaveBeenNthCalledWith(3, "C:\\safe\\worker-1", "pnpm.cmd", ["build"]);
-    expect(run).toHaveBeenNthCalledWith(4, "C:\\safe\\worker-1", "pnpm.cmd", ["validate:config"]);
-    expect(run).toHaveBeenNthCalledWith(5, "C:\\safe\\worker-1", "pnpm.cmd", ["test:mutation"]);
+    expect(run).toHaveBeenNthCalledWith(2, "C:\\safe\\worker-1", packageManager, ["check"]);
+    expect(run).toHaveBeenNthCalledWith(3, "C:\\safe\\worker-1", packageManager, ["build"]);
+    expect(run).toHaveBeenNthCalledWith(4, "C:\\safe\\worker-1", packageManager, [
+      "validate:config",
+    ]);
+    expect(run).toHaveBeenNthCalledWith(5, "C:\\safe\\worker-1", packageManager, ["test:mutation"]);
     expect(verifyVerdictSignature(verdict, key)).toBe(true);
     expect(verifyVerdictSignature(verdict, `${key}-wrong`)).toBe(false);
     expect(verdict.slotId).toBe("worker-1");
@@ -522,7 +525,7 @@ describe("deep verification", () => {
       stage: "verified",
     });
     expect(changedPaths).toHaveBeenCalledWith("C:\\safe\\worker-2", "origin/main");
-    expect(run).toHaveBeenCalledWith("C:\\safe\\worker-2", "pnpm.cmd", ["check"]);
+    expect(run).toHaveBeenCalledWith("C:\\safe\\worker-2", packageManager, ["check"]);
   });
 
   it("fails closed for missing slot config and a disappearing persisted attempt", async () => {

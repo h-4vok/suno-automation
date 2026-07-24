@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # VerificationGitAdapter compares HEAD against the merge base. Keep enough
+          # history for that comparison when a pull request has more than one commit.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
