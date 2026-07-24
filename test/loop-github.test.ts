@@ -203,7 +203,10 @@ describe("GitHub CLI loop adapter", () => {
                               },
                             },
                           ]
-                        : [],
+                        : // GitHub returns `{}` for a CrossReferencedEvent whose
+                          // source is not a PullRequest because the query selects
+                          // fields only in the PullRequest inline fragment.
+                          [{ source: {} }],
                   },
                 },
               },
@@ -296,6 +299,36 @@ describe("GitHub CLI loop adapter", () => {
     });
     multiple = true;
     await expect(adapter.getIssue(42)).rejects.toThrow("multiple-linked-pull-requests");
+  });
+
+  it("ignores GitHub's empty non-PR cross-reference source but rejects partial PR evidence", async () => {
+    let source: unknown = {};
+    const run = vi.fn((args: readonly string[]): Promise<CommandResult> => {
+      if (args[0] === "issue") {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            body: "",
+            createdAt: "2026-07-23T10:00:00.000Z",
+            labels: [{ name: "codex-ready" }],
+            number: 42,
+            state: "OPEN",
+            title: "Ready",
+            url: "https://github.com/owner/suno-automation/issues/42",
+          }),
+        });
+      }
+      return Promise.resolve({
+        stdout: JSON.stringify({
+          data: { repository: { issue: { timelineItems: { nodes: [{ source }] } } } },
+        }),
+      });
+    });
+    const adapter = new GhCliLoopAdapter(loopConfig(), { run });
+
+    await expect(adapter.getIssue(42)).resolves.not.toHaveProperty("linkedPullRequest");
+
+    source = { number: 99 };
+    await expect(adapter.getIssue(42)).rejects.toThrow("invalid-linked-pull-request");
   });
 
   it("derives promotion trust only from one exact GitHub-authored lifecycle comment", async () => {

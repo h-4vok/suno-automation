@@ -171,6 +171,12 @@ const GraphQlPullRequestSchema = z
   .strict();
 type GraphQlPullRequest = z.infer<typeof GraphQlPullRequestSchema>;
 
+// `CrossReferencedEvent.source` is an interface.  The PullRequest fragment in
+// `linkedPrQuery` deliberately selects no fields for non-PR sources, which
+// GitHub serializes as `{}` (rather than omitting `source`).  Accept that exact
+// GraphQL shape, but keep every partial/non-empty source fail-closed.
+const GraphQlNonPullRequestSourceSchema = z.object({}).strict();
+
 const LinkedPullRequestResponseSchema = z
   .object({
     data: z
@@ -185,7 +191,13 @@ const LinkedPullRequestResponseSchema = z
                       .array(
                         z
                           .object({
-                            source: GraphQlPullRequestSchema.nullable().optional(),
+                            source: z
+                              .union([
+                                GraphQlPullRequestSchema,
+                                GraphQlNonPullRequestSourceSchema,
+                                z.null(),
+                              ])
+                              .optional(),
                           })
                           .strict(),
                       )
@@ -706,6 +718,7 @@ export class GhCliLoopAdapter implements GitHubLoopPort {
     const prs = graph.data.repository.issue.timelineItems.nodes
       .flatMap((node) => {
         if (node.source === undefined || node.source === null) return [];
+        if (!Object.hasOwn(node.source, "repository")) return [];
         if (node.source.repository === undefined) {
           throw new GhCommandError("invalid-linked-pull-request");
         }
