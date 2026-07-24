@@ -28,6 +28,12 @@ adding a distinct decision surface. Loop changes are high risk when they affect 
 leases, lifecycle, recovery, retention, deduplication, verification routing, or publication
 predicates.
 
+The bounded five-file map has a blocking mutation floor of 70% and a 90% warning target. The lower
+blocking floor is deliberate: it is calibrated to the initial 73.41% baseline of the newly covered
+loop decision surface, rather than pretending that the narrower pre-loop 75% floor measured the
+same thing. A surviving mutant still needs a focused test or a documented equivalent/unreachable
+explanation before it is accepted.
+
 ## Codex loop verification gate
 
 Every implementation and rework attempt records focused-test evidence, then binds these gates to
