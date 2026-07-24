@@ -22,15 +22,12 @@ browser extension, Gemini adapter, or live-action paths.
 
 ```mermaid
 flowchart LR
-  Scheduled["Codex Desktop Scheduled task"] --> Skill["codex-loop-dispatcher skill"]
-  Skill --> CLI["Local loop CLI"]
-  CLI --> Mutex["Short dispatcher mutex"]
-  Mutex --> State["Atomic versioned loop state"]
-  CLI <--> GitHub["GitHub issues and draft PRs"]
-  CLI --> A["worker-1 permanent worktree/task"]
-  CLI --> B["worker-2 permanent worktree/task"]
+  Scheduled["Windows Task Scheduler"] --> Dispatch["Deterministic PowerShell dispatcher"]
+  Dispatch --> Journal["Ignored per-slot journal"]
+  Dispatch <--> GitHub["GitHub issues and draft PRs"]
+  Dispatch --> A["worker-1 codex exec wrapper"]
+  A --> Journal
   A --> PRA["One branch + one draft PR"]
-  B --> PRB["One branch + one draft PR"]
 ```
 
 Configuration fixes capacity at the ordered tuple `worker-1`, `worker-2`. The mutex is held only
@@ -50,8 +47,10 @@ a clean commit-bound verification verdict, an acknowledged non-force push, and e
 draft PR for the head branch. The worktree is parked on a detached remote base only after the remote
 commit and PR are proven; review state releases its slot.
 
-Codex Desktop owns task/worktree creation and the Scheduled UI. Repository TypeScript exposes
-ports and CLI acknowledgements rather than pretending there is a stable in-process Desktop API.
+The legacy two-slot TypeScript loop remains an auditable domain control surface. The trial Windows
+executor is deliberately separate: PowerShell performs cheap local slot checks and GitHub claims,
+then invokes Codex CLI only for an already claimed issue. It does not pretend there is a stable
+in-process Desktop API or create Desktop tasks.
 Before a live tick, the Desktop control plane writes a short-lived schema-validated capability
 artifact proving exact access to both configured projects and task controls. Operational evidence
 uses the same ignored-file boundary so project IDs and recovery details never enter argv, output,

@@ -32,6 +32,8 @@ reports/
 config/config.yaml
 config/*.local.yaml
 config/codex-loop.local.yaml
+# Shared Git metadata is intentionally machine-local. It contains worker paths, PIDs and logs.
+.git/codex-loop/
 runtime/
 .codex/runtime/
 
