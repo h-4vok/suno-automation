@@ -31,6 +31,7 @@ reports/
 !.env.example
 config/config.yaml
 config/*.local.yaml
+config/codex-loop.local.yaml
 runtime/
 .codex/runtime/
 

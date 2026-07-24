@@ -6,7 +6,12 @@ on:
     paths:
       - src/domain/generation-plan.ts
       - src/domain/weighted-selection.ts
+      - src/loop/domain.ts
+      - src/loop/policy.ts
+      - src/loop/verification.ts
+      - stryker.config.mjs
       - test/generation-plan.test.ts
+      - test/loop-*.test.ts
       - test/weighted-selection.test.ts
 
 permissions:

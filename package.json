@@ -16,6 +16,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
+    "loop": "tsx src/loop/cli.ts",
+    "loop:dispatch": "tsx src/loop/cli.ts dispatch",
+    "loop:health": "tsx src/loop/cli.ts health",
+    "loop:reconcile": "tsx src/loop/cli.ts reconcile",
     "prepare": "simple-git-hooks",
     "setup:local": "tsx scripts/local-setup.ts setup",
     "get-extension-token": "tsx scripts/local-setup.ts get-token",
@@ -27,7 +31,7 @@
     "test:watch": "vitest",
     "test:mutation": "stryker run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "validate:config": "tsx src/cli.ts validate-config config/config.example.yaml"
+    "validate:config": "tsx src/cli.ts validate-config config/config.example.yaml && tsx src/loop/cli.ts validate-config config/codex-loop.example.yaml"
   },
   "simple-git-hooks": {
     "pre-commit": "corepack pnpm exec lint-staged",
