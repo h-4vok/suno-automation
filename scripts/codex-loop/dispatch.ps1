@@ -32,6 +32,20 @@ function Start-Worker([int]$Issue, [string]$Branch, [int]$RecoveryCount) {
   if ($WhatIf) { Write-Output "Would launch worker for issue #$Issue."; return }
   Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $config.worker.worktreePath -WindowStyle Hidden | Out-Null
 }
+function Start-Recovery([object]$Journal, [string]$Reason) {
+  if ([int]$Journal.recoveryCount -ge [int]$config.scheduler.maxRecoveryAttempts) {
+    if (-not $WhatIf) { Set-IssueAttention $Journal.issue "recovery-exhausted" }
+    $Journal.status = "attention"; $Journal.completedAt = [DateTime]::UtcNow.ToString("o"); $Journal.recoveryReason = $Reason; Write-JsonAtomic $journalPath $Journal
+    Write-Output "Recovery limit exhausted; issue requires attention."; return
+  }
+  $Journal.status = "launching"
+  $Journal.recoveryCount = [int]$Journal.recoveryCount + 1
+  $Journal.startedAt = [DateTime]::UtcNow.ToString("o")
+  $Journal.lastRecoveryAt = $Journal.startedAt
+  $Journal.recoveryReason = $Reason
+  Write-JsonAtomic $journalPath $Journal
+  Start-Worker $Journal.issue $Journal.branch $Journal.recoveryCount
+}
 function Test-WorkerParked {
   $status = git -C $config.worker.worktreePath status --porcelain
   if ($LASTEXITCODE -ne 0 -or -not [string]::IsNullOrWhiteSpace(($status -join ""))) { return $false }
@@ -71,8 +85,7 @@ if ($null -ne $journal -and $journal.status -eq "launching") {
     $journal.status = "attention"; $journal.completedAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
     Write-Output "Wrapper launch limit exhausted; issue requires attention."; return
   }
-  $journal.status = "recovering"; $journal.recoveryCount = [int]$journal.recoveryCount + 1; Write-JsonAtomic $journalPath $journal
-  Start-Worker $journal.issue $journal.branch $journal.recoveryCount
+  Start-Recovery $journal "wrapper-launch-timeout"
   return
 }
 if ($null -ne $journal -and $journal.status -eq "running") {
@@ -86,12 +99,17 @@ if ($null -ne $journal -and $journal.status -eq "running") {
     $journal.status = "attention"; $journal.completedAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
     Write-Output "Recovery limit exhausted; issue requires attention."; return
   }
-  $nextRecovery = $recoveryCount + 1
-  $journal.status = "recovering"; $journal.recoveryCount = $nextRecovery; $journal.lastRecoveryAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
-  Start-Worker $journal.issue $journal.branch $nextRecovery
+  Start-Recovery $journal "worker-stalled"
   return
 }
-if ($null -ne $journal -and $journal.status -in @("completed", "failed", "attention", "recovering")) {
+if ($null -ne $journal -and $journal.status -eq "failed") {
+  # A pre-launch failure (for example a Windows command-shim resolution
+  # failure) has no useful Codex process to preserve. Retry the same claimed
+  # issue and branch under the bounded recovery policy.
+  Start-Recovery $journal "worker-terminal-failed"
+  return
+}
+if ($null -ne $journal -and $journal.status -in @("completed", "attention")) {
   if ($journal.status -eq "completed" -and (Test-WorkerParked)) {
     $issueState = gh issue view $journal.issue --repo $config.repository --json labels,state | ConvertFrom-Json
     if ($LASTEXITCODE -eq 0 -and $issueState.state -eq "OPEN" -and (@($issueState.labels | ForEach-Object name) -contains "codex-review")) {

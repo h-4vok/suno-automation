@@ -38,6 +38,8 @@ describe("one-worker Windows scheduler assets", () => {
     expect(issueQuery).toBeGreaterThan(busyCheck);
     expect(dispatcher).toContain("maxRecoveryAttempts");
     expect(dispatcher).toContain('journal.status -eq "launching"');
+    expect(dispatcher).toContain('journal.status -eq "failed"');
+    expect(dispatcher).toContain('Start-Recovery $journal "worker-terminal-failed"');
     expect(dispatcher).toContain("codex-needs-attention");
     expect(dispatcher).toContain("Disable-ScheduledTask");
     expect(dispatcher).not.toContain("Remove-Item -Recurse");
@@ -47,7 +49,9 @@ describe("one-worker Windows scheduler assets", () => {
     const wrapper = await asset("scripts/codex-loop/worker-wrapper.ps1");
 
     expect(wrapper).toContain("lastWrapperHeartbeatAt");
-    expect(wrapper).toContain('Start-Process -FilePath "codex"');
+    expect(wrapper).toContain('Get-Command "codex.cmd" -CommandType Application');
+    expect(wrapper).toContain("codex-launch-failed");
+    expect(wrapper).toContain("Get-SafeLaunchDiagnostic");
     expect(wrapper).toContain("finally");
     expect(wrapper).toContain("preserve all existing useful changes");
   });

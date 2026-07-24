@@ -23,6 +23,23 @@ function Write-JsonAtomic([string]$Path, [object]$Value) {
   }
 }
 
+function Resolve-CodexCli {
+  # `codex` resolves to the npm PowerShell shim first on Windows PowerShell
+  # 5.1.  Start-Process cannot launch that .ps1 shim as a child executable.
+  # Resolve the command-script application explicitly instead.
+  $command = Get-Command "codex.cmd" -CommandType Application -ErrorAction Stop | Select-Object -First 1
+  if ([string]::IsNullOrWhiteSpace($command.Source)) { throw "Codex CLI command script was not found." }
+  return $command.Source
+}
+
+function Get-SafeLaunchDiagnostic([Exception]$Exception) {
+  # Keep journals useful without copying command lines, prompts, paths, or
+  # potentially sensitive process error text into durable state.
+  $name = $Exception.GetType().Name -replace "[^A-Za-z0-9.-]", ""
+  if ([string]::IsNullOrWhiteSpace($name)) { return "unknown" }
+  return $name.Substring(0, [Math]::Min(80, $name.Length))
+}
+
 $config = Read-Json $ConfigPath
 $commonDir = (git -C $config.worker.worktreePath rev-parse --git-common-dir 2>$null)
 if ($LASTEXITCODE -ne 0) { throw "Unable to resolve shared Git directory." }
@@ -48,7 +65,10 @@ Write-JsonAtomic $journalPath $journal
 $child = $null
 try {
   $arguments = @("exec", "--json", $prompt)
-  $child = Start-Process -FilePath "codex" -ArgumentList $arguments -WorkingDirectory $config.worker.worktreePath -RedirectStandardOutput $logPath -RedirectStandardError "$logPath.stderr" -PassThru
+  $codexCli = Resolve-CodexCli
+  $journal.phase = "launching-codex"
+  Write-JsonAtomic $journalPath $journal
+  $child = Start-Process -FilePath $codexCli -ArgumentList $arguments -WorkingDirectory $config.worker.worktreePath -RedirectStandardOutput $logPath -RedirectStandardError "$logPath.stderr" -PassThru
   $journal.codexPid = $child.Id
   $journal.phase = "working"
   Write-JsonAtomic $journalPath $journal
@@ -65,7 +85,8 @@ try {
 } catch {
   $journal.status = "failed"
   $journal.phase = "terminal"
-  $journal.errorCode = "wrapper-error"
+  $journal.errorCode = "codex-launch-failed"
+  $journal.errorDetail = Get-SafeLaunchDiagnostic $_.Exception
 } finally {
   $journal.lastWrapperHeartbeatAt = [DateTime]::UtcNow.ToString("o")
   $journal.completedAt = [DateTime]::UtcNow.ToString("o")
