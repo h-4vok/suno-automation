@@ -14,6 +14,16 @@ function Write-JsonAtomic([string]$Path, [object]$Value) {
   try { $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporary -Encoding utf8 -NoNewline; Move-Item -LiteralPath $temporary -Destination $Path -Force }
   finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
 }
+function Set-JsonField([object]$Value, [string]$Name, [object]$FieldValue) {
+  # ConvertFrom-Json returns PSCustomObject on Windows PowerShell 5.1.  A
+  # recovered journal can legitimately predate a newly-added field, and
+  # assigning that field directly then throws instead of recording recovery.
+  if ($Value -is [System.Collections.IDictionary]) {
+    $Value[$Name] = $FieldValue
+    return
+  }
+  $Value | Add-Member -NotePropertyName $Name -NotePropertyValue $FieldValue -Force
+}
 function Test-ProcessIdentity($Pid, [string]$StartedAt) {
   try {
     $process = Get-Process -Id $Pid -ErrorAction Stop
@@ -35,14 +45,15 @@ function Start-Worker([int]$Issue, [string]$Branch, [int]$RecoveryCount) {
 function Start-Recovery([object]$Journal, [string]$Reason) {
   if ([int]$Journal.recoveryCount -ge [int]$config.scheduler.maxRecoveryAttempts) {
     if (-not $WhatIf) { Set-IssueAttention $Journal.issue "recovery-exhausted" }
-    $Journal.status = "attention"; $Journal.completedAt = [DateTime]::UtcNow.ToString("o"); $Journal.recoveryReason = $Reason; Write-JsonAtomic $journalPath $Journal
+    Set-JsonField $Journal "status" "attention"; Set-JsonField $Journal "completedAt" ([DateTime]::UtcNow.ToString("o")); Set-JsonField $Journal "recoveryReason" $Reason; Write-JsonAtomic $journalPath $Journal
     Write-Output "Recovery limit exhausted; issue requires attention."; return
   }
-  $Journal.status = "launching"
-  $Journal.recoveryCount = [int]$Journal.recoveryCount + 1
-  $Journal.startedAt = [DateTime]::UtcNow.ToString("o")
-  $Journal.lastRecoveryAt = $Journal.startedAt
-  $Journal.recoveryReason = $Reason
+  Set-JsonField $Journal "status" "launching"
+  Set-JsonField $Journal "recoveryCount" ([int]$Journal.recoveryCount + 1)
+  $recoveryStartedAt = [DateTime]::UtcNow.ToString("o")
+  Set-JsonField $Journal "startedAt" $recoveryStartedAt
+  Set-JsonField $Journal "lastRecoveryAt" $recoveryStartedAt
+  Set-JsonField $Journal "recoveryReason" $Reason
   Write-JsonAtomic $journalPath $Journal
   Start-Worker $Journal.issue $Journal.branch $Journal.recoveryCount
 }
@@ -66,13 +77,13 @@ $schedulerPath = Join-Path $stateDirectory "scheduler.json"
 $journalPath = Join-Path $stateDirectory "$($config.worker.id).json"
 $scheduler = if (Test-Path -LiteralPath $schedulerPath) { Read-Json $schedulerPath } else { @{ version = 1; ticks = 0 } }
 if ([int]$scheduler.ticks -ge [int]$config.scheduler.maxTicks) { Write-Output "Tick limit reached; scheduler remains disabled."; return }
-$scheduler.ticks = [int]$scheduler.ticks + 1
-$scheduler.lastTickAt = [DateTime]::UtcNow.ToString("o")
+Set-JsonField $scheduler "ticks" ([int]$scheduler.ticks + 1)
+Set-JsonField $scheduler "lastTickAt" ([DateTime]::UtcNow.ToString("o"))
 Write-JsonAtomic $schedulerPath $scheduler
 $disableAfterThisTick = [int]$scheduler.ticks -ge [int]$config.scheduler.maxTicks
 if ($disableAfterThisTick -and -not $WhatIf) {
   Disable-ScheduledTask -TaskName $config.scheduler.taskName | Out-Null
-  $scheduler.disabledAt = [DateTime]::UtcNow.ToString("o")
+  Set-JsonField $scheduler "disabledAt" ([DateTime]::UtcNow.ToString("o"))
   Write-JsonAtomic $schedulerPath $scheduler
 }
 
@@ -82,7 +93,7 @@ if ($null -ne $journal -and $journal.status -eq "launching") {
   if ($launchAge.TotalSeconds -le 60) { Write-Output "Worker wrapper is launching."; return }
   if ([int]$journal.recoveryCount -ge [int]$config.scheduler.maxRecoveryAttempts) {
     if (-not $WhatIf) { Set-IssueAttention $journal.issue "wrapper-launch-exhausted" }
-    $journal.status = "attention"; $journal.completedAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
+    Set-JsonField $journal "status" "attention"; Set-JsonField $journal "completedAt" ([DateTime]::UtcNow.ToString("o")); Write-JsonAtomic $journalPath $journal
     Write-Output "Wrapper launch limit exhausted; issue requires attention."; return
   }
   Start-Recovery $journal "wrapper-launch-timeout"
@@ -96,7 +107,7 @@ if ($null -ne $journal -and $journal.status -eq "running") {
   if ($alive) { taskkill.exe /PID $journal.wrapperPid /T /F | Out-Null }
   if ($recoveryCount -ge [int]$config.scheduler.maxRecoveryAttempts) {
     if (-not $WhatIf) { Set-IssueAttention $journal.issue "recovery-exhausted" }
-    $journal.status = "attention"; $journal.completedAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
+    Set-JsonField $journal "status" "attention"; Set-JsonField $journal "completedAt" ([DateTime]::UtcNow.ToString("o")); Write-JsonAtomic $journalPath $journal
     Write-Output "Recovery limit exhausted; issue requires attention."; return
   }
   Start-Recovery $journal "worker-stalled"
@@ -113,7 +124,7 @@ if ($null -ne $journal -and $journal.status -in @("completed", "attention")) {
   if ($journal.status -eq "completed" -and (Test-WorkerParked)) {
     $issueState = gh issue view $journal.issue --repo $config.repository --json labels,state | ConvertFrom-Json
     if ($LASTEXITCODE -eq 0 -and $issueState.state -eq "OPEN" -and (@($issueState.labels | ForEach-Object name) -contains "codex-review")) {
-      $journal.status = "released"; $journal.releasedAt = [DateTime]::UtcNow.ToString("o"); Write-JsonAtomic $journalPath $journal
+      Set-JsonField $journal "status" "released"; Set-JsonField $journal "releasedAt" ([DateTime]::UtcNow.ToString("o")); Write-JsonAtomic $journalPath $journal
       $journal = $null
     }
   }

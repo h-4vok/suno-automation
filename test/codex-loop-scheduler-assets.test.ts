@@ -67,4 +67,15 @@ describe("one-worker Windows scheduler assets", () => {
       expect(script).not.toMatch(/ConvertFrom-Json\s+-AsHashtable/);
     }
   });
+
+  it("can add recovery fields to legacy PowerShell JSON journals", async () => {
+    const dispatcher = await asset("scripts/codex-loop/dispatch.ps1");
+
+    expect(dispatcher).toContain("function Set-JsonField");
+    expect(dispatcher).toContain(
+      "Add-Member -NotePropertyName $Name -NotePropertyValue $FieldValue -Force",
+    );
+    expect(dispatcher).toContain('Set-JsonField $Journal "startedAt" $recoveryStartedAt');
+    expect(dispatcher).not.toContain("$Journal.startedAt =");
+  });
 });
