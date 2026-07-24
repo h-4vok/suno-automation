@@ -50,6 +50,10 @@ describe("one-worker Windows scheduler assets", () => {
 
     expect(wrapper).toContain("lastWrapperHeartbeatAt");
     expect(wrapper).toContain('Get-Command "codex.cmd" -CommandType Application');
+    expect(wrapper).toContain("function Start-CodexChild");
+    expect(wrapper).toContain('"-EncodedCommand", $encodedRunner');
+    expect(wrapper).toContain('& $codexCli "exec" "--json" $prompt');
+    expect(wrapper).not.toContain("ArgumentList $arguments");
     expect(wrapper).toContain("codex-launch-failed");
     expect(wrapper).toContain("Get-SafeLaunchDiagnostic");
     expect(wrapper).toContain("finally");

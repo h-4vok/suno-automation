@@ -40,6 +40,33 @@ function Get-SafeLaunchDiagnostic([Exception]$Exception) {
   return $name.Substring(0, [Math]::Min(80, $name.Length))
 }
 
+function Start-CodexChild([string]$CodexCli, [string]$Prompt, [string]$WorkingDirectory, [string]$StandardOutputPath, [string]$StandardErrorPath) {
+  # Windows PowerShell 5.1 flattens Start-Process -ArgumentList arrays into a
+  # command line.  That would split the multi-word prompt into separate Codex
+  # arguments.  Pass the dynamic values through this wrapper process's
+  # inherited environment and run Codex with PowerShell's call operator, which
+  # preserves $Prompt as exactly one positional argument.
+  $runner = @'
+$ErrorActionPreference = "Stop"
+$codexCli = [Environment]::GetEnvironmentVariable("CODEX_LOOP_CODEX_CLI", "Process")
+$prompt = [Environment]::GetEnvironmentVariable("CODEX_LOOP_PROMPT", "Process")
+if ([string]::IsNullOrWhiteSpace($codexCli) -or $null -eq $prompt) { throw "Codex runner environment is incomplete." }
+& $codexCli "exec" "--json" $prompt
+exit $LASTEXITCODE
+'@
+  $encodedRunner = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($runner))
+  $previousCli = $env:CODEX_LOOP_CODEX_CLI
+  $previousPrompt = $env:CODEX_LOOP_PROMPT
+  try {
+    $env:CODEX_LOOP_CODEX_CLI = $CodexCli
+    $env:CODEX_LOOP_PROMPT = $Prompt
+    return Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedRunner) -WorkingDirectory $WorkingDirectory -RedirectStandardOutput $StandardOutputPath -RedirectStandardError $StandardErrorPath -PassThru
+  } finally {
+    $env:CODEX_LOOP_CODEX_CLI = $previousCli
+    $env:CODEX_LOOP_PROMPT = $previousPrompt
+  }
+}
+
 $config = Read-Json $ConfigPath
 $commonDir = (git -C $config.worker.worktreePath rev-parse --git-common-dir 2>$null)
 if ($LASTEXITCODE -ne 0) { throw "Unable to resolve shared Git directory." }
@@ -64,11 +91,10 @@ $journal = @{
 Write-JsonAtomic $journalPath $journal
 $child = $null
 try {
-  $arguments = @("exec", "--json", $prompt)
   $codexCli = Resolve-CodexCli
   $journal.phase = "launching-codex"
   Write-JsonAtomic $journalPath $journal
-  $child = Start-Process -FilePath $codexCli -ArgumentList $arguments -WorkingDirectory $config.worker.worktreePath -RedirectStandardOutput $logPath -RedirectStandardError "$logPath.stderr" -PassThru
+  $child = Start-CodexChild $codexCli $prompt $config.worker.worktreePath $logPath "$logPath.stderr"
   $journal.codexPid = $child.Id
   $journal.phase = "working"
   Write-JsonAtomic $journalPath $journal
