@@ -107,6 +107,7 @@ export function analyzeCandidates(
       }
     } else if (lifecycles[0] === "codex-ready") {
       if (issuePriority === undefined) reasons.push("invalid-priority");
+      if (!isTrusted(issue.author, trustedLogins)) reasons.push("untrusted-issue-author");
       if (!isTrusted(issue.promotion?.actor, trustedLogins)) {
         reasons.push("untrusted-promotion");
       }

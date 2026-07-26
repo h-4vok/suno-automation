@@ -165,6 +165,7 @@ export type LoopSlotId = (typeof LOOP_SLOT_IDS)[number];
 
 export const IssueCandidateSchema = z
   .object({
+    author: GitHubLoginSchema.optional(),
     createdAt: TimestampSchema,
     dependencies: z.array(
       z

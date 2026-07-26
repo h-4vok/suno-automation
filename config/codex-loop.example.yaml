@@ -11,6 +11,7 @@ repository:
 stateDirectory: C:\\replace\\with\\git-common-dir\\codex-loop
 verificationKeyEnv: CODEX_LOOP_VERIFICATION_KEY
 trustedLogins:
+  # Local issue creators and contract promoters allowed to enter the queue.
   - replace-with-github-login
 
 # Capacity is intentionally fixed at exactly two permanent Codex projects/worktrees.

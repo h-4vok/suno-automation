@@ -21,6 +21,16 @@ const analyzeCandidates = (
 ) => analyzeCandidatesWithTrust(issues, state, ["OWNER"]);
 
 describe("dual-worker loop domain", () => {
+  it("requires the issue creator to be allowlisted", () => {
+    const allowed = analyzeCandidates([issueCandidate(1, { author: "owner" })], loopState());
+    const rejected = analyzeCandidates([issueCandidate(2, { author: "attacker" })], loopState());
+    const incomplete = analyzeCandidates([issueCandidate(3, { author: undefined })], loopState());
+
+    expect(allowed.eligible.map((candidate) => candidate.issue.number)).toEqual([1]);
+    expect(rejected.blockers.get(2)).toContain("untrusted-issue-author");
+    expect(incomplete.blockers.get(3)).toContain("untrusted-issue-author");
+  });
+
   it("orders trusted rework before priority and uses deterministic ties", () => {
     const state = loopState();
     state.reworkRequests.push({

@@ -138,6 +138,7 @@ export class ExecFileGhRunner implements GhCommandRunner {
 }
 
 interface GhIssue {
+  readonly author?: { readonly login?: string };
   readonly body: string;
   readonly comments?: readonly {
     readonly author?: { readonly login?: string };
@@ -324,7 +325,7 @@ export class GhCliLoopAdapter implements GitHubLoopPort {
       "--limit",
       "100",
       "--json",
-      "number,title,body,state,labels,createdAt,url,comments",
+      "number,title,body,state,labels,createdAt,url,comments,author",
     ]);
     const issues = parseJson(response.stdout, "invalid-issue-list") as readonly GhIssue[];
     const tracked = issues.filter((issue) =>
@@ -341,7 +342,7 @@ export class GhCliLoopAdapter implements GitHubLoopPort {
       "--repo",
       this.#repository,
       "--json",
-      "number,title,body,state,labels,createdAt,url,comments",
+      "number,title,body,state,labels,createdAt,url,comments,author",
     ]);
     return this.#hydrateIssue(parseJson(response.stdout, "invalid-issue") as GhIssue);
   }
@@ -661,6 +662,7 @@ export class GhCliLoopAdapter implements GitHubLoopPort {
     const linkedPullRequest = await this.#linkedPullRequest(issue.number);
     const promotion = promotionEvidence(issue.comments);
     return IssueCandidateSchema.parse({
+      ...(issue.author?.login === undefined ? {} : { author: issue.author.login }),
       createdAt: issue.createdAt,
       dependencies: dependencyStates,
       labels: issue.labels.map((label) => label.name),

@@ -57,6 +57,7 @@ export function issueCandidate(
   overrides: Partial<IssueCandidate> = {},
 ): IssueCandidate {
   return IssueCandidateSchema.parse({
+    author: "owner",
     createdAt: new Date(Date.parse(loopNow) + number * 1_000).toISOString(),
     dependencies: [],
     labels: ["enhancement", "codex-ready", "priority:p1"],
