@@ -92,6 +92,7 @@ export function analyzeCandidates(
     if (activeIssueNumbers.has(issue.number)) reasons.push("active-claim");
     if (issue.dependencies.some((dependency) => dependency.state !== "closed"))
       reasons.push("unresolved-dependency");
+    if (!isTrusted(issue.author, trustedLogins)) reasons.push("untrusted-issue-author");
 
     if (lifecycles[0] === "codex-rework") {
       if (request === undefined) reasons.push("missing-trusted-rework-request");
@@ -107,7 +108,6 @@ export function analyzeCandidates(
       }
     } else if (lifecycles[0] === "codex-ready") {
       if (issuePriority === undefined) reasons.push("invalid-priority");
-      if (!isTrusted(issue.author, trustedLogins)) reasons.push("untrusted-issue-author");
       if (!isTrusted(issue.promotion?.actor, trustedLogins)) {
         reasons.push("untrusted-promotion");
       }

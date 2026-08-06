@@ -31,6 +31,44 @@ describe("dual-worker loop domain", () => {
     expect(incomplete.blockers.get(3)).toContain("untrusted-issue-author");
   });
 
+  it("rejects rework for an issue created by an untrusted author", () => {
+    const state = loopState();
+    state.reworkRequests.push({
+      approvedFeedbackIds: ["feedback-1"],
+      baseCommit: "abcdef1234567",
+      eventId: "rework-event",
+      issueNumber: 4,
+      prNumber: 12,
+      requestedAt: "2026-07-23T11:00:00.000Z",
+      requestedBy: "owner",
+      status: "queued",
+    });
+
+    const analysis = analyzeCandidates(
+      [
+        issueCandidate(4, {
+          author: "attacker",
+          labels: ["codex-rework", "priority:p2"],
+          linkedPullRequest: {
+            baseRef: "main",
+            draft: true,
+            headRef: "codex/4-safe",
+            headSha: "abcdef1234567",
+            headRepositoryOwner: "owner",
+            isCrossRepository: false,
+            number: 12,
+            state: "open",
+            url: "https://github.com/owner/suno-automation/pull/12",
+          },
+        }),
+      ],
+      state,
+    );
+
+    expect(analysis.eligible).toEqual([]);
+    expect(analysis.blockers.get(4)).toContain("untrusted-issue-author");
+  });
+
   it("orders trusted rework before priority and uses deterministic ties", () => {
     const state = loopState();
     state.reworkRequests.push({
