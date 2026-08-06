@@ -15,6 +15,52 @@ flowchart LR
 
 The split is intentional: issue polling, assignment, and leases run locally; secrets and Suno orchestration stay in Node; cookies stay inside the browser profile; the content script knows only the prepared Suno fields. Two pre-existing worktrees provide bounded parallelism, one active issue per worktree.
 
+## Codex engineering control plane
+
+The GitHub issue loop is a separate subsystem under `src/loop`; it never calls the Suno coordinator,
+browser extension, Gemini adapter, or live-action paths.
+
+```mermaid
+flowchart LR
+  Scheduled["Windows Task Scheduler"] --> Dispatch["Deterministic PowerShell dispatcher"]
+  Dispatch --> Journal["Ignored per-slot journal"]
+  Dispatch <--> GitHub["GitHub issues and draft PRs"]
+  Dispatch --> A["worker-1 codex exec wrapper"]
+  A --> Journal
+  A --> PRA["One branch + one draft PR"]
+```
+
+Configuration fixes capacity at the ordered tuple `worker-1`, `worker-2`. The mutex is held only
+while reconciling candidates and reserving slots. A durable lease belongs to one slot/attempt;
+worker execution never holds a global lock. The claim saga persists a pending reservation, applies
+one idempotent GitHub lifecycle event, then waits for the Scheduled adapter to acknowledge the
+opaque Codex task identifier. An acknowledgement retry searches by attempt identifier before
+creating another task.
+
+Each attempt journals safe stages from `reserved` through `review` or `attention`. State and audit
+writes validate against Zod and use temporary-file replacement. Malformed state is preserved and
+startup fails closed. Issue bodies, review text, prompts, project identifiers, worktree paths, and
+credentials are excluded from audit and lifecycle comments.
+
+Workers create or reuse `codex/<issue>-<slug>` from the configured remote base. Publication requires
+a clean commit-bound verification verdict, an acknowledged non-force push, and exactly one open
+draft PR for the head branch. The worktree is parked on a detached remote base only after the remote
+commit and PR are proven; review state releases its slot.
+
+The legacy two-slot TypeScript loop remains an auditable domain control surface. The trial Windows
+executor is deliberately separate: PowerShell performs cheap local slot checks and GitHub claims,
+then invokes Codex CLI only for an already claimed issue. It does not pretend there is a stable
+in-process Desktop API or create Desktop tasks.
+Before a live tick, the Desktop control plane writes a short-lived schema-validated capability
+artifact proving exact access to both configured projects and task controls. Operational evidence
+uses the same ignored-file boundary so project IDs and recovery details never enter argv, output,
+GitHub, or durable audit.
+
+Recovery and reconciliation separate pure policy from effects. Fresh GitHub-authenticated or
+GitHub-comment authorization is evaluated before any state transition. Safe apply operations can
+repair lifecycle acknowledgements and terminal indexes; local conflicts remain capacity-holding
+attention and no code path performs destructive Git cleanup.
+
 ## Daily run
 
 1. Cron creates one run for the current day in the configured timezone.

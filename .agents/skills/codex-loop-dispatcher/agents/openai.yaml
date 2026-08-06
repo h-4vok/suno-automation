@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Loop Dispatcher"
+  short_description: "Dispatch two safe local Codex workers"
+  default_prompt: "Use $codex-loop-dispatcher to reconcile and fill the two local worker slots."

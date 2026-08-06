@@ -3,7 +3,9 @@ import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  { ignores: ["dist/**", "extension/dist/**", "coverage/**", "graphify-out/**"] },
+  {
+    ignores: [".stryker-tmp/**", "dist/**", "extension/dist/**", "coverage/**", "graphify-out/**"],
+  },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

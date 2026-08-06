@@ -100,6 +100,37 @@ describe("local setup command", () => {
     expect(calls[0]?.arguments_.join(" ")).not.toContain(token);
     expect(calls[0]?.executable.length).toBeGreaterThan(0);
   });
+
+  it("keeps a quoted valid token unchanged and reports that clipboard use was disabled", async () => {
+    const token = "b".repeat(64);
+    await writeFile(join(temporaryRoot, ".env"), `SUNO_EXTENSION_TOKEN='${token}'\nOTHER=value\n`);
+    await writeFile(join(temporaryRoot, "config", "config.yaml"), "preserved: true\n");
+
+    const result = await runLocalSetup({ command: "get-token", root: temporaryRoot });
+
+    expect(result).toEqual({
+      configCreated: false,
+      environmentChanged: true,
+      rotated: false,
+      tokenCopied: false,
+    });
+    const environment = await readFile(join(temporaryRoot, ".env"), "utf8");
+    expect(requireToken(environment)).toBe(token);
+    expect(formatSetupResult(result)).toContain("Clipboard disabled");
+  });
+
+  it("fails explicitly if every supported clipboard command rejects the token", () => {
+    const token = "c".repeat(64);
+    const attempted: string[] = [];
+
+    expect(() =>
+      copyTokenToClipboard(token, (executable) => {
+        attempted.push(executable);
+        return 1;
+      }),
+    ).toThrow("Could not copy the extension token to the clipboard.");
+    expect(attempted).not.toHaveLength(0);
+  });
 });
 
 function requireToken(environment: string): string {

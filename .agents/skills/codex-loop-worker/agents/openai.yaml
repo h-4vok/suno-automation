@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Loop Worker"
+  short_description: "Implement one claimed issue into a draft PR"
+  default_prompt: "Use $codex-loop-worker to execute one claimed Codex loop attempt safely."

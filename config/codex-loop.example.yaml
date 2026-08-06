@@ -1,0 +1,33 @@
+version: 1
+
+repository:
+  owner: replace-with-github-login
+  name: suno-automation
+  baseBranch: main
+
+# The real file lives at <git-common-dir>/codex-loop/config.yaml and stays uncommitted.
+# This directory is resolved from the repository's Git common directory at runtime.
+# Keep the real local value uncommitted and owner-only.
+stateDirectory: C:\\replace\\with\\git-common-dir\\codex-loop
+verificationKeyEnv: CODEX_LOOP_VERIFICATION_KEY
+trustedLogins:
+  # Local issue creators and contract promoters allowed to enter the queue.
+  - replace-with-github-login
+
+# Capacity is intentionally fixed at exactly two permanent Codex projects/worktrees.
+slots:
+  - id: worker-1
+    worktreePath: C:\\replace\\with\\permanent\\worker-1
+    projectId: replace-worker-1-project
+  - id: worker-2
+    worktreePath: C:\\replace\\with\\permanent\\worker-2
+    projectId: replace-worker-2-project
+
+dispatcher:
+  pollMinutes: 15
+  mutexSeconds: 60
+  leaseSeconds: 7200
+
+retention:
+  days: 90
+  completedAttempts: 500

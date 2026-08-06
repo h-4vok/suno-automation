@@ -103,6 +103,8 @@ is intentionally quiet in the service-worker console.
 | `corepack pnpm validate:config`  | Validate the committed example configuration                  |
 | `corepack pnpm check`            | Run formatting, lint, type checking, and the full test suite  |
 | `corepack pnpm test:mutation`    | Challenge high-risk selection and planning tests              |
+| `corepack pnpm loop -- <args>`   | Run the local dual-worker Codex issue-loop CLI                |
+| `corepack pnpm loop:health`      | Inspect both worker slots and the GitHub queue                |
 
 After changing extension code, run `corepack pnpm build` and press **Reload** on
 `brave://extensions`.
@@ -118,6 +120,13 @@ Local values belong in the ignored `config/config.yaml`.
 - Generated structures are instrumental and contain no sung lyrics.
 - The scheduler uses an IANA timezone and only runs while the coordinator is running.
 
+The separate engineering loop uses
+[`config/codex-loop.example.yaml`](config/codex-loop.example.yaml). Copy it to the ignored
+the shared Git-common-dir `codex-loop/config.yaml` (or an absolute local override), then replace the two permanent worktree/project targets and trusted
+GitHub login locally. The committed example contains no machine identifiers. Codex Desktop
+Scheduled configuration remains a supervised UI step; see
+[`docs/codex-loop.md`](docs/codex-loop.md).
+
 ## Development and documentation
 
 The project includes unit, component, integration, DOM-contract, and mutation tests. Pre-commit
@@ -129,6 +138,7 @@ hooks format and lint staged files; the pre-push hook runs the complete quality 
 - [Security policy](SECURITY.md)
 - [Agent engineering rules](AGENTS.md)
 - [Local Codex issue loop](docs/codex-loop.md)
+- [Epic 05 acceptance map](docs/epic-05-acceptance.md)
 
 Generated builds, runtime state, local presets, API keys, extension tokens, coverage, and Graphify
 artifacts are intentionally excluded from Git.

@@ -1,0 +1,120 @@
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory = $true)][string]$ConfigPath,
+  [Parameter(Mandatory = $true)][int]$Issue,
+  [Parameter(Mandatory = $true)][string]$Branch,
+  [int]$RecoveryCount = 0
+)
+
+$ErrorActionPreference = "Stop"
+
+function Read-Json([string]$Path) {
+  # The default Windows JSON parser returns a PSCustomObject.
+  return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+}
+
+function Write-JsonAtomic([string]$Path, [object]$Value) {
+  $temporary = "$Path.$([guid]::NewGuid().ToString('N')).tmp"
+  try {
+    $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $temporary -Encoding utf8 -NoNewline
+    Move-Item -LiteralPath $temporary -Destination $Path -Force
+  } finally {
+    if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+  }
+}
+
+function Resolve-CodexCli {
+  # `codex` resolves to the npm PowerShell shim first on Windows PowerShell
+  # 5.1.  Start-Process cannot launch that .ps1 shim as a child executable.
+  # Resolve the command-script application explicitly instead.
+  $command = Get-Command "codex.cmd" -CommandType Application -ErrorAction Stop | Select-Object -First 1
+  if ([string]::IsNullOrWhiteSpace($command.Source)) { throw "Codex CLI command script was not found." }
+  return $command.Source
+}
+
+function Get-SafeLaunchDiagnostic([Exception]$Exception) {
+  # Keep journals useful without copying command lines, prompts, paths, or
+  # potentially sensitive process error text into durable state.
+  $name = $Exception.GetType().Name -replace "[^A-Za-z0-9.-]", ""
+  if ([string]::IsNullOrWhiteSpace($name)) { return "unknown" }
+  return $name.Substring(0, [Math]::Min(80, $name.Length))
+}
+
+function Start-CodexChild([string]$CodexCli, [string]$Prompt, [string]$WorkingDirectory, [string]$StandardOutputPath, [string]$StandardErrorPath) {
+  # Windows PowerShell 5.1 flattens Start-Process -ArgumentList arrays into a
+  # command line.  That would split the multi-word prompt into separate Codex
+  # arguments.  Pass the dynamic values through this wrapper process's
+  # inherited environment and run Codex with PowerShell's call operator, which
+  # preserves $Prompt as exactly one positional argument.
+  $runner = @'
+$ErrorActionPreference = "Stop"
+$codexCli = [Environment]::GetEnvironmentVariable("CODEX_LOOP_CODEX_CLI", "Process")
+$prompt = [Environment]::GetEnvironmentVariable("CODEX_LOOP_PROMPT", "Process")
+if ([string]::IsNullOrWhiteSpace($codexCli) -or $null -eq $prompt) { throw "Codex runner environment is incomplete." }
+& $codexCli "exec" "--json" $prompt
+exit $LASTEXITCODE
+'@
+  $encodedRunner = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($runner))
+  $previousCli = $env:CODEX_LOOP_CODEX_CLI
+  $previousPrompt = $env:CODEX_LOOP_PROMPT
+  try {
+    $env:CODEX_LOOP_CODEX_CLI = $CodexCli
+    $env:CODEX_LOOP_PROMPT = $Prompt
+    return Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedRunner) -WorkingDirectory $WorkingDirectory -RedirectStandardOutput $StandardOutputPath -RedirectStandardError $StandardErrorPath -PassThru
+  } finally {
+    $env:CODEX_LOOP_CODEX_CLI = $previousCli
+    $env:CODEX_LOOP_PROMPT = $previousPrompt
+  }
+}
+
+$config = Read-Json $ConfigPath
+$commonDir = (git -C $config.worker.worktreePath rev-parse --git-common-dir 2>$null)
+if ($LASTEXITCODE -ne 0) { throw "Unable to resolve shared Git directory." }
+$commonDirectoryPath = if ([IO.Path]::IsPathRooted($commonDir)) { $commonDir } else { Join-Path $config.worker.worktreePath $commonDir }
+$stateDirectory = Join-Path ([IO.Path]::GetFullPath($commonDirectoryPath)) "codex-loop\scheduler"
+New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
+$journalPath = Join-Path $stateDirectory "$($config.worker.id).json"
+$logPath = Join-Path $stateDirectory "$($config.worker.id)-$Issue.log"
+
+$isRecovery = $RecoveryCount -gt 0
+$mode = if ($isRecovery) { "recovery" } else { "implementation" }
+$prompt = @"
+You are the sole local Codex CLI worker for GitHub issue #$Issue in this exact worktree. This issue is already claimed. Work only on this issue and branch $Branch. Read AGENTS.md and the GitHub contract with gh before editing. $mode run: preserve all existing useful changes and commits; never reset, clean, force-push, merge, approve, or access Suno. Create or resume the recorded branch, implement, test deeply, commit, push the recorded branch, open or reuse exactly one draft PR, then move the issue to codex-review and park the clean worktree detached on its remote base. If verification cannot safely succeed, leave the worktree intact and move the issue to codex-needs-attention with a concise safe reason. Do not select or claim another issue.
+"@
+
+$journal = @{
+  version = 1; slot = $config.worker.id; status = "running"; issue = $Issue; branch = $Branch
+  wrapperPid = $PID; wrapperStartedAt = [DateTime]::UtcNow.ToString("o")
+  lastWrapperHeartbeatAt = [DateTime]::UtcNow.ToString("o"); lastCodexEventAt = $null
+  recoveryCount = $RecoveryCount; logFile = $logPath; phase = "starting"
+}
+Write-JsonAtomic $journalPath $journal
+$child = $null
+try {
+  $codexCli = Resolve-CodexCli
+  $journal.phase = "launching-codex"
+  Write-JsonAtomic $journalPath $journal
+  $child = Start-CodexChild $codexCli $prompt $config.worker.worktreePath $logPath "$logPath.stderr"
+  $journal.codexPid = $child.Id
+  $journal.phase = "working"
+  Write-JsonAtomic $journalPath $journal
+  while (-not $child.HasExited) {
+    Start-Sleep -Seconds ([Math]::Max(5, [int]$config.scheduler.heartbeatSeconds))
+    $journal.lastWrapperHeartbeatAt = [DateTime]::UtcNow.ToString("o")
+    $journal.lastCodexEventAt = if (Test-Path -LiteralPath $logPath) { (Get-Item -LiteralPath $logPath).LastWriteTimeUtc.ToString("o") } else { $null }
+    $journal.phase = "working"
+    Write-JsonAtomic $journalPath $journal
+  }
+  $journal.status = if ($child.ExitCode -eq 0) { "completed" } else { "failed" }
+  $journal.exitCode = $child.ExitCode
+  $journal.phase = "terminal"
+} catch {
+  $journal.status = "failed"
+  $journal.phase = "terminal"
+  $journal.errorCode = "codex-launch-failed"
+  $journal.errorDetail = Get-SafeLaunchDiagnostic $_.Exception
+} finally {
+  $journal.lastWrapperHeartbeatAt = [DateTime]::UtcNow.ToString("o")
+  $journal.completedAt = [DateTime]::UtcNow.ToString("o")
+  Write-JsonAtomic $journalPath $journal
+}

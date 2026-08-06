@@ -6,7 +6,12 @@ on:
     paths:
       - src/domain/generation-plan.ts
       - src/domain/weighted-selection.ts
+      - src/loop/domain.ts
+      - src/loop/policy.ts
+      - src/loop/verification.ts
+      - stryker.config.mjs
       - test/generation-plan.test.ts
+      - test/loop-*.test.ts
       - test/weighted-selection.test.ts
 
 permissions:
@@ -17,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Loop verification tests read HEAD~1; the default shallow checkout omits it.
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0

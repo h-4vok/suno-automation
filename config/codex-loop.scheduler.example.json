@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "repository": "replace-with-github-login/suno-automation",
+  "worker": {
+    "id": "worker-1",
+    "worktreePath": "C:\\replace\\with\\permanent\\worker-1",
+    "baseBranch": "main"
+  },
+  "scheduler": {
+    "taskName": "CodexLoopWorker1",
+    "pollMinutes": 5,
+    "maxTicks": 10,
+    "heartbeatSeconds": 15,
+    "stalledAfterSeconds": 1800,
+    "maxRecoveryAttempts": 5
+  }
+}

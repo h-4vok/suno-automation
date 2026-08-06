@@ -8,6 +8,84 @@ The scheduler polls GitHub for `codex-ready` issues, verifies dependencies, clai
 
 Workers must fail closed when issue state, dependencies, ownership, secrets, worktree state, or recovery evidence is unknown. They must never place credentials, cookies, session data, or private generated content in GitHub. Every implementation ends in a human-reviewed draft pull request; workers do not self-approve or merge.
 
+## Codex loop supervised setup
+
+Do not enable Scheduled until the full dry-run and smoke sequence passes.
+
+1. From a clean control checkout, inspect the worktree plan:
+
+   ```powershell
+   .\scripts\setup-codex-loop-worktrees.ps1 `
+     -ControlRoot <control> `
+     -Worker1Path <new-worker-1> `
+     -Worker2Path <new-worker-2>
+   ```
+
+2. Re-run with `-Apply` only after verifying the three exact resolved directories. The script
+   creates two detached worktrees from the fetched remote base and installs frozen dependencies. It
+   never deletes, resets, cleans, or moves another worktree.
+3. In Codex Desktop, add each as a permanent project. Keep the control checkout as the dispatcher
+   project. Copy `config/codex-loop.example.yaml` to ignored
+   the shared Git-common-dir `codex-loop/config.yaml` (or an absolute local override); replace paths, opaque project IDs, and trusted login locally.
+4. Generate at least 32 random characters for `CODEX_LOOP_VERIFICATION_KEY` in the local environment.
+   This is an integrity key, not an OpenAI credential. Never print or commit it.
+5. Validate and inspect:
+
+   ```powershell
+   pnpm loop validate-config
+   pnpm loop health --json
+   pnpm loop dispatch --dry-run --json
+   ```
+
+6. Manually invoke `$codex-loop-dispatcher` once. It must inspect actual Codex tasks/projects,
+   create owner-only ignored task/capability evidence files without echoing their contents, run
+   reconciliation and live dispatch with those files, then delete them. Confirm both permanent
+   projects can be targeted and no claim occurs before the capability handshake.
+7. In Codex Desktop **Scheduled**, create one project-scoped standalone task in the control project
+   at a 15-minute cadence. Use the exact durable prompt in the dispatcher skill. Keep the machine
+   powered on and Codex Desktop running.
+8. Start with workspace-scoped write plus explicit `git`, `gh`, `pnpm`, GitHub network, and exact
+   ignored state-directory access. Do not grant browser/Computer Use, home-wide write, OpenAI API,
+   or live Suno access.
+
+Codex Scheduled tasks are configured and inspected in the Desktop/web UI; the CLI only prepares and
+tests the repository workflow. Scheduled runs are unattended, so inspect the first runs before
+leaving the cadence active. See the official
+[Scheduled tasks](https://learn.chatgpt.com/docs/automations) and
+[worktrees](https://learn.chatgpt.com/docs/environments/git-worktrees) documentation.
+
+### Synthetic concurrency smoke
+
+Use three independent, harmless, non-browser issues whose changes touch isolated disposable
+fixtures/docs. Promote only the three synthetic items.
+
+1. With both slots free, make two issues `codex-ready` and run one supervised dispatch tick.
+2. Confirm distinct attempts/tasks/worktrees and `codex-in-progress` on both.
+3. Promote the third; confirm it remains untouched in `codex-ready` while capacity is two.
+4. Let the first two produce one draft PR each. Confirm commit-bound verification evidence and no
+   second PR/branch.
+5. Interrupt one worker after a safe journal stage. Use the dispatcher skill to capture fresh task
+   evidence and run reconcile dry-run. Resume it, or post the exact supervised reconciliation
+   marker and apply the single recommendation. Prove no duplicate task/comment/commit/PR.
+6. Confirm health shows `2/2`, then a released slot and the third assignment.
+7. Leave synthetic PRs open for human inspection. A human closes/merges and cleans them after
+   acceptance; automation does not.
+
+### Pause and recovery
+
+- Pause the Scheduled task in **Scheduled** before maintenance or config/allowlist changes.
+- Run `pnpm loop health ... --json`, then use `$codex-loop-dispatcher` to capture fresh task
+  evidence and run reconciliation.
+- Resume only when issue lifecycle, lease, task, worktree, branch, commit, and PR evidence agree.
+- Expired-lease recovery requires a fresh owner-only evidence file observed after expiry, with the
+  authenticated `gh` login equal to an allowlisted actor and every task/process/worktree/branch/PR
+  signal definitively absent. Unknown evidence goes to attention; positive evidence is preserved.
+- Reconciliation apply requires an exact fresh GitHub marker:
+  `codex-reconcile event=<id> attempt=<attempt> action=<recommendation>`. Never fix evidence with
+  reset, clean, force push, branch deletion, replacement PR, issue reopening, or merge.
+- To disable the loop, pause/delete the Scheduled task first, leave state evidence intact, then
+  remove permanent worktrees manually only after proving they are clean and fully pushed.
+
 ## One-time local setup
 
 1. Run `pnpm setup:local`. It creates missing local files and copies a random extension token to the clipboard without printing it. Existing config and token are preserved.
